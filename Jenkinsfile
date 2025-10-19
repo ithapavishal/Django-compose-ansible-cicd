@@ -58,21 +58,39 @@ pipeline {
         //     }
         // }
 
+    //     stage('Push to DockerHub') {
+    //     steps {
+    //         script {
+    //             withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
+    //             // docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials-id') {
+    //                 sh '''
+    //                 IMAGE_NAME=thapavishal/employee
+    //                 docker tag employee-web_services:latest $IMAGE_NAME:${BUILD_NUMBER}
+    //                 docker push $IMAGE_NAME:${BUILD_NUMBER}
+    //                 docker push $IMAGE_NAME:latest
+    //                 '''
+    //             }
+    //         }
+    //     }
+    // }
+
         stage('Push to DockerHub') {
-    steps {
-        script {
-            withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
-            // docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials-id') {
-                sh '''
-                IMAGE_NAME=thapavishal/employee
-                docker tag employee-web_services:latest $IMAGE_NAME:${BUILD_NUMBER}
-                docker push $IMAGE_NAME:${BUILD_NUMBER}
-                docker push $IMAGE_NAME:latest
-                '''
+        steps {
+            script {
+                withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
+                    sh '''
+                    IMAGE_NAME=thapavishal/employee
+                    echo "Tagging and pushing image to DockerHub..."
+                    docker tag employee-web_services:latest $IMAGE_NAME:${BUILD_NUMBER}
+                    docker tag employee-web_services:latest $IMAGE_NAME:latest
+                    docker push $IMAGE_NAME:${BUILD_NUMBER}
+                    docker push $IMAGE_NAME:latest
+                    '''
+                }
             }
         }
     }
-}
+
 
 
         stage('Deploy to Development') {
