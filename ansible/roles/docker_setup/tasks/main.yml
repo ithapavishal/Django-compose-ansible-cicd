@@ -1,0 +1,192 @@
+---
+- name: Install Docker on Ubuntu using official Docker repo
+  hosts: all
+  become: true
+
+# - name: → Describes what the playbook does.
+# hosts: all → Run these tasks on all servers listed in your Ansible inventory file.
+# become: true → Run all commands with sudo (i.e., as the root user).
+
+# 🧱 Tasks (step-by-step)
+# Each task below tells Ansible what to do on the target machine.
+
+# 1️⃣ Update the apt cache
+  tasks:
+    - name: Update apt cache 
+      ansible.builtin.apt:
+        update_cache: yes
+# This refreshes the list of available packages so the system knows about the latest updates.
+# (Equivalent to running sudo apt update in the terminal.)
+
+# 2️⃣ Install required dependencies    
+    - name: Ensure dependencies are installed 
+      ansible.builtin.package:
+        name:
+          - bc
+          - curl
+          - expect
+          - git
+          - ca-certificates
+          - gnupg
+        state: present
+# These are basic tools Docker needs to install or function properly:
+#   curl → To download files from URLs
+#   git → To clone repositories
+#   ca-certificates → For secure HTTPS connections
+#   bc, expect → Utilities used in scripts or automation
+
+#     (Equivalent to sudo apt install bc curl expect git ca-certificates)
+
+# 3️⃣ Create a directory for Docker’s GPG key
+    - name: Create Docker GPG key directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+# This creates a folder (/etc/apt/keyrings) with proper permissions where the Docker GPG key will be stored.
+
+# Creates a folder called /etc/apt/keyrings
+#   → This is where trusted GPG keys are stored for the system’s package manager (APT).
+#   state: directory
+#   → Ensures the path exists and is a directory (not a file).
+#   mode: "0755"
+#   → Sets permissions:
+#   7 → Owner can read, write, execute.
+#   5 → Group and others can read and execute.
+#   (So, it’s readable by everyone but only writable by root.)
+
+# 4️⃣ Download Docker’s official GPG key
+
+    - name: Download Docker's official GPG key 
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+
+# This downloads Docker’s GPG key and saves it locally.
+# 🧠 GPG keys are used to verify that downloaded packages come from a trusted source.
+
+# 5️⃣ Add Docker repository to APT sources
+
+    - name: Add Docker repository to Apt sources
+      ansible.builtin.apt_repository:
+        repo: "deb [arch={{ ansible_architecture }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+        filename: docker
+
+# This tells Ubuntu where to find Docker packages — the official Docker repository.
+#   It dynamically uses:
+#   {{ ansible_architecture }} → machine type (like amd64)
+#   {{ ansible_distribution_release }} → Ubuntu version (like jammy or focal)
+#   So you always get the correct repository for your system.
+
+
+# 6️⃣ Update apt cache again
+
+    - name: Update apt cache after adding Docker repository
+      ansible.builtin.apt:
+        update_cache: yes
+
+# Now that a new repository is added, refresh the package list again to include Docker packages.
+
+# 7️⃣ Install Docker packages
+
+    - name: Install Docker and Docker Compose
+      ansible.builtin.package:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+
+# This installs:
+#   docker-ce → Docker Community Edition (main engine)
+#   docker-ce-cli → Docker command-line tool
+#   containerd.io → Container runtime
+#   docker-buildx-plugin → For building multi-platform images
+#   docker-compose-plugin → Docker Compose support (v2)
+
+# 8️⃣ Start and enable Docker service
+    - name: Ensure Docker service is enabled and started
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: yes
+
+# This makes sure the Docker service:
+#   Is running right now (state: started)
+#   Will automatically start on boot (enabled: yes)
+#   (Equivalent to sudo systemctl enable --now docker)
+
+# 9️⃣ Add the ubuntu user to the docker group
+
+    - name: Add ubuntu user to docker group
+      ansible.builtin.user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+# This lets the ubuntu user run Docker commands without using sudo.
+# The user might need to log out and log back in for the group change to take effect.
+
+# CONCLUSION:
+# This playbook:
+# Updates and prepares Ubuntu.
+# Adds Docker’s official repository.
+# Installs Docker and Docker Compose.
+# Starts the Docker service.
+# Grants user permissions to use Docker.
+
+
+
+# ************************************************************************************************************************************
+# ************************************************************************************************************************************
+# ************************************************************************************************************************************
+
+
+# ---
+# - name: Install Docker dependencies
+#   apt:
+#     name:
+#       - apt-transport-https
+#       - ca-certificates
+#       - curl
+#       - software-properties-common
+#     state: present
+#     update_cache: yes
+
+# - name: Add Docker GPG key
+#   shell: curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+
+# - name: Add Docker repository
+#   apt_repository:
+#     repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
+
+# - name: Install Docker Engine
+#   apt:
+#     name: docker-ce
+#     state: present
+#     update_cache: yes
+
+# - name: Install Docker Compose
+#   get_url:
+#     url: https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-linux-x86_64
+#     dest: /usr/local/bin/docker-compose
+#     mode: '0755'
+
+# - name: Ensure Docker service is running
+#   service:
+#     name: docker
+#     state: started
+#     enabled: yes
+
+# Explanation:
+#   This ensures the target server can run containers even if it’s a fresh VM.
+
+
+
+# Purpose:
+# Ensures Docker and Docker Compose are installed before deploying containers.
+
