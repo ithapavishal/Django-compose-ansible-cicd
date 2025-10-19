@@ -1,0 +1,110 @@
+---
+- name: Deploy Django App with Docker Compose
+  hosts: web
+  become: yes
+  vars_files:
+    - "../group_vars/{{ env }}.}/docker-compose.yml"
+
+  roles:
+    - docker_setup
+    - app_deploy
+
+
+# Explanation:
+#   hosts: web        → deploys to the web server group.
+#   vars_files        → loads environment-specific variables (dev.yml or prod.yml).
+#   Uses two roles:
+#     docker_setup:    ensures Docker & Compose are installed.
+#     app_deploy:      deploys the app itself.
+
+
+# Purpose:
+# This is the main playbook called from the Jenkins pipeline.
+# It orchestrates Docker setup, pulls the latest image, and runs containers.
+
+
+
+
+# ************************ SINLGE FILE FOR EVERYTHING *******************
+
+# ---
+# - name: Deploy e-learning Django App with PostgreSQL via Docker Compose
+#   hosts: "{{ env }}"
+#   become: yes
+#   vars:
+#     project_dir: "/opt/elearning"
+#     compose_file: "{{ project_dir }}/docker-compose.yml"
+#     env_file: "{{ project_dir }}/.env"
+#     image_tag: "{{ image_tag | default('thapavishal/elearning:latest') }}"
+#     django_container: "{{ 'elearningdev' if env == 'dev' else 'elearningprod' }}"
+#     django_port: "{{ '8000' if env == 'dev' else '8001' }}"
+
+#   tasks:
+#     - name: Install Docker
+#       ansible.builtin.apt:
+#         name: docker.io
+#         state: present
+#         update_cache: yes
+#       when: ansible_os_family == "Debian"
+
+#     - name: Install Docker Compose plugin
+#       ansible.builtin.apt:
+#         name: docker-compose-plugin
+#         state: present
+#       when: ansible_os_family == "Debian"
+
+#     - name: Ensure project directory exists
+#       ansible.builtin.file:
+#         path: "{{ project_dir }}"
+#         state: directory
+#         owner: "{{ ansible_user }}"
+#         mode: '0755'
+
+#     - name: Copy docker-compose.yml to server
+#       ansible.builtin.copy:
+#         dest: "{{ compose_file }}"
+#         content: |
+#           version: "3.9"
+#           services:
+#             db:
+#               image: postgres:15
+#               container_name: "{{ django_container }}_db"
+#               env_file:
+#                 - .env
+#               volumes:
+#                 - db_data:/var/lib/postgresql/data
+#               ports:
+#                 - "${DB_PORT:-5432}:5432"
+
+#             web:
+#               image: {{ image_tag }}
+#               container_name: {{ django_container }}
+#               command: >
+#                 sh -c "python manage.py migrate &&
+#                        python manage.py collectstatic --noinput &&
+#                        gunicorn elearning.wsgi:application --bind 0.0.0.0:8000"
+#               env_file:
+#                 - .env
+#               volumes:
+#                 - static_volume:/app/static
+#                 - media_volume:/app/media
+#               ports:
+#                 - "{{ django_port }}:8000"
+#               depends_on:
+#                 - db
+
+#           volumes:
+#             db_data:
+#             static_volume:
+#             media_volume:
+
+#     - name: Copy .env file to server
+#       ansible.builtin.copy:
+#         src: "./.env"      # path from playbook execution dir
+#         dest: "{{ env_file }}"
+#         mode: '0600'
+
+#     - name: Bring up services with Docker Compose
+#       ansible.builtin.command:
+#         cmd: docker compose -f {{ compose_file }} up -d
+#         chdir: "{{ project_dir }}"
