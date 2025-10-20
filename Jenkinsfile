@@ -24,27 +24,51 @@ pipeline {
             }
         }
 
+        // stage('Build & Start with Docker Compose') {
+        //     steps {
+        //         script {
+        //             withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
+        //                 sh '''
+        //                 echo "Logging into DockerHub and building images..."
+        //                 docker compose down --remove-orphans
+
+        //                 for i in 1 2 3; do
+        //                     docker compose build && break || {
+        //                         echo "Build failed... retrying in 10s ($i/3)"
+        //                         sleep 10
+        //                     }
+        //                 done
+
+        //                 docker compose up -d
+        //                 '''
+        //             }
+        //         }
+        //     }
+        // }
+
+
         stage('Build & Start with Docker Compose') {
-            steps {
-                script {
-                    withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
-                        sh '''
-                        echo "Logging into DockerHub and building images..."
-                        docker compose down --remove-orphans
+        steps {
+            script {
+                // Use withCredentials to inject the secrets into the shell session
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-credentials', 
+                    usernameVariable: 'DOCKER_USER', 
+                    passwordVariable: 'DOCKER_PASS')]) { 
+                    sh '''
+                    echo "Logging into DockerHub and building images..."
+                    
+                    # Explicitly log in using the injected credentials
+                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
 
-                        for i in 1 2 3; do
-                            docker compose build && break || {
-                                echo "Build failed... retrying in 10s ($i/3)"
-                                sleep 10
-                            }
-                        done
-
-                        docker compose up -d
-                        '''
-                    }
+                    docker compose down --remove-orphans
+                    // ... rest of your build loop
+                    '''
                 }
             }
         }
+    }
+
 
         stage('Run Migrations') {
             steps {
