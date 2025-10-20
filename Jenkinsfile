@@ -62,7 +62,7 @@ pipeline {
                     echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
 
                     docker compose down --remove-orphans
-                    // ... rest of your build loop
+                    # ... rest of your build loop
                     '''
                 }
             }
