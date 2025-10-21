@@ -50,19 +50,24 @@ pipeline {
         stage('Build & Start with Docker Compose') {
         steps {
             script {
-                // Use withCredentials to inject the secrets into the shell session
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-credentials', 
-                    usernameVariable: 'DOCKER_USER', 
-                    passwordVariable: 'DOCKER_PASS')]) { 
+                withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
                     sh '''
-                    echo "Logging into DockerHub and building images..."
+                    echo "Building and starting Docker Compose services..."
+                    docker-compose down || true
+                    docker-compose build --no-cache
+                    docker-compose up -d
                     
-                    # Explicitly log in using the injected credentials
-                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-
-                    docker compose down --remove-orphans
-                    # ... rest of your build loop
+                    echo "Waiting for services to be healthy..."
+                    sleep 30
+                    
+                    echo "Checking running containers..."
+                    docker-compose ps
+                    
+                    echo "Checking Django service logs..."
+                    docker-compose logs web_services
+                    
+                    echo "Checking PostgreSQL service logs..."
+                    docker-compose logs postgres_db
                     '''
                 }
             }
@@ -70,13 +75,13 @@ pipeline {
     }
 
 
-        stage('Run Migrations') {
-            steps {
-                sh '''
-                docker compose run --rm web_services python manage.py migrate --noinput
-                '''
-            }
-        }
+        // stage('Run Migrations') {
+        //     steps {
+        //         sh '''
+        //         docker compose run --rm web_services python manage.py migrate --noinput
+        //         '''
+        //     }
+        // }
 
         stage('Push to DockerHub') {
             steps {
